@@ -1,6 +1,6 @@
 # Cabal
 dist
-dist-newstype
+dist-newstyle
 cabal.project.local
 
 # Output of the OPL script
