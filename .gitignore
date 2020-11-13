@@ -1,0 +1,10 @@
+# Cabal
+dist
+dist-newstype
+cabal.project.local
+
+# Output of the OPL script
+output.txt
+
+# Temporal files
+*~
