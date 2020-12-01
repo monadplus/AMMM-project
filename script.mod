@@ -3,16 +3,16 @@ main {
   var out = new IloOplOutputFile("output.txt");
 
   var files = new Array();
-  files[0] = "input/input.dat";
-  files[1] = "input/input2.dat";
-  files[2] = "input/input3.dat";
+  files[0] = "input/sample_30.dat";
+  //files[1] = "input/input2.dat";
+  //files[2] = "input/input3.dat";
 
   var src = new IloOplModelSource("project.mod");
   var def = new IloOplModelDefinition(src);
   var cplex = new IloCplex();
 
   cplex.tilim=120; // time limit in seconds
-  cplex.epgap=0.001; // Branch and bound acceptance.
+  cplex.epgap=0.01; // Branch and bound acceptance.
 
   var start = new Date();
   var startTime = start.getTime();
