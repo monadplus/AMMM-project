@@ -1,16 +1,23 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Main where
 
 -----------------------------------------------
 
 import Generators
+import Heuristics
 import Options.Applicative
 
 -----------------------------------------------
 
+data Algorithm
+  = Greedy Bool
+  | GRASP
+  deriving stock Show
+
 data Config
-  = SolverConfig
+  = SolverConfig FilePath Algorithm
   | GenConfig FilePath Int
 
 main :: IO ()
@@ -42,15 +49,40 @@ genParser =
           <> metavar "INT"
       )
 
--- TODO
 solverParser :: Parser Config
-solverParser = pure SolverConfig
+solverParser =
+  SolverConfig
+    <$> strOption
+      ( long "file"
+          <> short 'f'
+          <> help "Output file"
+          <> metavar "STRING"
+      )
+    <*> algorithmParser
+
+
+algorithmParser :: Parser Algorithm
+algorithmParser =
+    f <$> flag (Greedy False) GRASP
+        ( long "GRASP"
+        <> short 'g'
+        <> help "Pick an algorithm" )
+      <*> switch
+        ( long "local search"
+        <> short 'l'
+        <> help "Adds a Local Search for the Greedy Algorithm" )
+  where
+    f (Greedy _) localSearch = Greedy localSearch
+    f GRASP _ = GRASP
 
 run :: Config -> IO ()
 run = \case
   (GenConfig fp n) -> genSample (addSizetoFile fp n) n
-  -- TODO
-  SolverConfig -> fail "not implemented"
+  SolverConfig fp algorithm ->
+    case algorithm of
+      Greedy False -> runGreedy fp
+      -- TODO
+      _ -> error "not implemented"
 
 addSizetoFile :: FilePath -> Int -> FilePath
 addSizetoFile fp n =

@@ -44,12 +44,14 @@ library
   import:             common-options
   hs-source-dirs:     src
   exposed-modules:    Generators
+                      Heuristics
                         Internal.Generators
                         Internal.OPL
                         Internal.Types
                         Internal.Greedy
                         Internal.LocalSearch
                         Internal.GRASP
+                        Internal.Pretty
 
   build-depends:      array              ^>=0.5.4,
                       aeson              ^>=1.5.4,
