@@ -1,141 +1,242 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Internal.Greedy where
 
 ------------------------------------------------
 
-import Lens.Micro.Platform
-import Internal.Types
+import Control.Exception
+import Control.Monad
+import Control.Monad.State.Lazy
+import Data.Coerce
 import Data.Function
 import Data.List
-import Data.Ord
-import Control.Monad
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Control.Monad.State.Lazy
 import Data.Maybe (catMaybes)
-import Data.Coerce
+import Data.Ord
+import Internal.Types
+import Lens.Micro.Platform
+import Text.Printf
 
 ------------------------------------------------
 
+data Infeasible = Infeasible
+  deriving stock (Show)
+  deriving anyclass (Exception)
+
+-- | Cost of the facility
 type Cost = Int
+
+-- | Facility occupancy
 type Occupacy = Double
 
--- | As Primary or Secondary city
-data As = As
-  { _aType :: FacilityType
-  , _aPrimary :: [City]
-  , _aSecondary :: [City]
+-- | Minimum distance between facilities
+type MinDistLoc = Double
+
+-- | Information related to location
+data LocationInfo = LocationInfo
+  { _aType :: FacilityType,
+    _aPrimary :: [City],
+    _aSecondary :: [City]
   }
 
 -- | Partial Assignment
-newtype PA = PA { _pa :: Map Location As}
-makeLenses ''PA
-makeLenses ''As
+newtype PA = PA {_pa :: Map Location LocationInfo}
 
+makeLenses ''LocationInfo
+makeLenses ''PA
+
+-- | Empty Partial Assignment
 emptyPA :: PA
 emptyPA = PA Map.empty
 
-sortByPopulationDecr :: [City] -> [City]
-sortByPopulationDecr = sortBy (compare `on` view (cPopulation . to Down))
-
--- TODO
+-- | From a Partial Assignment to a Solution
+--
+-- This is just data manipulation
 toSolution :: PA -> Solution
-toSolution = undefined
+toSolution =
+  coerce
+    . Map.map toAssignment
+    . Map.foldlWithKey' go Map.empty
+    . coerce
+  where
+    go :: Map City [Facility] -> Location -> LocationInfo -> Map City [Facility]
+    go dict l info =
+      foldl'
+        (reduce Secondary)
+        (foldl' (reduce Primary) dict $ info ^. aPrimary)
+        (info ^. aSecondary)
+      where
+        reduce t dict c =
+          let facility = Facility l (info ^. aType) t
+           in Map.alter (Just . maybe [facility] (facility :)) c dict
 
-data Tier = Primary | Secondary
+    -- Throws unless the assignment has a primary and a secondary facility.
+    toAssignment :: [Facility] -> Assignment
+    toAssignment (f1 : f2 : []) =
+      case (f1 ^. tier, f2 ^. tier) of
+        (Primary, Secondary) -> Assignment f1 f2
+        (Secondary, Primary) -> Assignment f2 f1
+        _ -> error "Expecting a primary and a secondary facility"
+    toAssignment xs = error $ printf "Expecting 2 facilities but got %d" (length xs)
 
-tierToLens :: Tier -> Lens As As [City] [City]
+-- | Tier lens like
+tierToLens :: Tier -> Lens LocationInfo LocationInfo [City] [City]
 tierToLens Primary = aPrimary
 tierToLens Secondary = aSecondary
 
-data Cause = Distance | Capacity
-
-{- | 'Nothing' if the assignment is not feasible. Otherwise, the cost difference.
-
-Constraints:
-
-* primary facility != secondary facility
-* min. distance between facility's locations
-* city - primary facility - at most dCity
-* city - secondary facility - at most 3*dCity
-* Capacity of a center >= sum(population primary) + 0.1*sum(population secondary)
-
-Cost of a location:
- * If the location is infeasible, return infinity
- * If the location has a logistic center, within a feasible distance and the capacity of the location - the population is > 0, return 0 cost
- * If the location doesn't has a logistic center or the current does not fullfil the constrants, then add/upgrade the one with the smallest cost that satisfies the distance and population constraint
--}
-computeCost
-  :: Tier -> PA -> City -> [FacilityType]
-  -> Location -> Maybe (Cost, Location, PA)
-computeCost tier (PA w) c fTypes l =
+-- | 'Nothing' if the assignment is not feasible. Otherwise, the cost difference.
+--
+-- Constraints:
+--
+--  * primary facility != secondary facility
+--  * min. distance between facility's locations
+--  * city - primary facility - at most dCity
+--  * city - secondary facility - at most 3*dCity
+--  * Capacity of a center >= sum(population primary) + 0.1*sum(population secondary)
+--
+-- Objective Function:
+--
+--  * If the location is infeasible, return infinity
+--  * If the location has a logistic center, within a feasible distance and the capacity of the location - the population is > 0, return 0 cost
+--  * If the location doesn't has a logistic center or the current does not fullfil the constrants, then add/upgrade the one with the smallest cost that satisfies the distance and population constraint
+computeCost ::
+  Tier ->
+  MinDistLoc ->
+  PA ->
+  City ->
+  [FacilityType] ->
+  Location ->
+  Maybe (Cost, Location, PA)
+computeCost tier minDistLoc' (PA w) c facilityTypes l =
   case Map.lookup l w of
+    -- The location doesn't have a facility
     Nothing -> do
-      undefined --TODO
-      -- Check min distance
-      -- Pick the smallest cost, with enough distance and capacity
-    Just info@(As (FacilityType maxDist maxCap cost) _ _) -> do
-      let currentOccupacy = getOccupacy info
-          hasCapacity = currentOccupacy <= (fromIntegral maxCap)
-      case (hasRange (coerce maxDist), hasCapacity) of
-        (True, True) -> do
-          let updated = coerce $ Map.adjust (tierToLens tier <>~ [c]) l w
-          Just (0, l, updated)
-        (b1, b2) -> tryToUpdate b1 b2 currentOccupacy
+      if checkMinDist
+        then do
+          let currentOccupacy = getOccupacy Nothing
+          ft <- findFacilityType currentOccupacy
+          let updated = coerce $ Map.adjust (set aType ft) l w
+              costDiff = ft ^. cost
+          return (costDiff, l, updated)
+        else -- Infeasible due to the min distance constraint.
+          Nothing
 
+    -- The location has a facility
+    Just info@(LocationInfo (FacilityType maxDist maxCap oldCost) _ _) -> do
+      let currentOccupacy = getOccupacy (Just info)
+          hasRange' = hasRange (coerce maxDist)
+          hasCapacity' = currentOccupacy <= (fromIntegral maxCap)
+      case hasRange' && hasCapacity' of
+        -- Feasible assignment
+        True -> do
+          let updated = coerce $ Map.adjust (tierToLens tier <>~ [c]) l w
+              costDiff = 0 :: Cost
+          Just (costDiff, l, updated)
+        -- Requires update of facility
+        False -> do
+          ft <- findFacilityType currentOccupacy
+          let updated = coerce $ Map.adjust (set aType ft) l w
+              costDiff = (ft ^. cost) - oldCost
+          return (costDiff, l, updated)
   where
+    -- Minimum distance between locations.
+    minDistLoc :: Distance
+    minDistLoc = coerce minDistLoc'
+
+    -- Distance between the city c and the location l
     dist :: Distance
-    dist = euclideanDistance (c^.cLocation) l
+    dist = euclideanDistance (c ^. cLocation) l
+
+    checkMinDist :: Bool
+    checkMinDist =
+      any (\l2 -> euclideanDistance l l2 >= minDistLoc) $ Map.keys w
 
     hasRange :: Distance -> Bool
     hasRange maxDist = case tier of
       Primary -> dist <= maxDist
-      Secondary -> dist <= 3*maxDist
+      Secondary -> dist <= 3 * maxDist
 
-    getOccupacy :: As -> Occupacy
-    getOccupacy info =
-      let getPop l = info^..l.folded.cPopulation.population
-          sumOf = fromIntegral . sum
-          primaryPop = sumOf (getPop aPrimary)
-          secondaryPop = sumOf (getPop aSecondary)
-          cityPop = fromIntegral (c^.cPopulation.population)
+    -- Increment of occupacy when city c is assigned to location l
+    cityOccupacyIncr :: Occupacy
+    cityOccupacyIncr =
+      let cityPop = fromIntegral (c ^. cPopulation . population)
        in case tier of
-        Primary -> (cityPop + primaryPop) + 0.1*secondaryPop
-        Secondary -> primaryPop + 0.1*(secondaryPop + cityPop)
+            Primary -> cityPop
+            Secondary -> 0.1 * cityPop
 
-    -- range capacity
-    tryToUpdate :: Bool -> Bool -> Occupacy -> Maybe (Cost, Location, PA)
-    tryToUpdate True False occupacy = undefined
-    tryToUpdate False True occupacy = undefined
-    tryToUpdate False False occupacy = undefined
-    tryToUpdate _ _ _ = error "Unreachable"
+    -- Includes the current candidate city and an optional assignment
+    getOccupacy :: Maybe LocationInfo -> Occupacy
+    getOccupacy Nothing = cityOccupacyIncr
+    getOccupacy (Just info) =
+      let getPop tier = fromIntegral . sum $ info ^.. (tierToLens tier) . folded . cPopulation . population
+          primaryPop = getPop Primary
+          secondaryPop = getPop Secondary
+          occupacyWOAssig = primaryPop + 0.1 * secondaryPop
+       in occupacyWOAssig + cityOccupacyIncr
 
+    -- Returns the facility with minimum cost or Infeasible
+    findFacilityType :: Occupacy -> Maybe FacilityType
+    findFacilityType currentOccupacy =
+      (flip find) facilityTypes $ \ft ->
+        let maxCapacity = ft ^. cap . to fromIntegral
+            hasRange' = hasRange (coerce $ ft ^. dCity)
+            hasCapacity' = currentOccupacy <= maxCapacity
+         in hasRange' && hasCapacity'
 
-pickBestAndUpdate
-  :: MonadState PA m
-  => [(Cost, Location, PA)] -> m Location
-pickBestAndUpdate candidates = do
-  let (_, location, newPA) = minimumBy (compare `on` view _1) candidates
-  put newPA
-  return location
-
-assignBest :: MonadState PA m
-  => Tier -> City -> [FacilityType] -> [Location] -> m Location
-assignBest t c ft locations = do
+-- | Given a city c computes the best assignment wrt the current partial solution
+assignBest ::
+  (MonadIO m, MonadState PA m) =>
+  Tier ->
+  MinDistLoc ->
+  City ->
+  [FacilityType] ->
+  [Location] ->
+  m Location
+assignBest t minDistLoc c ft locations = do
   w <- get
-  pickBestAndUpdate $
-    catMaybes (computeCost t w c ft <$> locations)
+  case catMaybes (computeCost t minDistLoc w c ft <$> locations) of
+    [] -> liftIO $ throwIO Infeasible
+    solutions -> pickBestAndUpdate solutions
+  where
+    pickBestAndUpdate candidates = do
+      let (_, location, newPA) = minimumBy (compare `on` view _1) candidates
+      put newPA
+      return location
 
-runProblem :: State PA a -> Solution
-runProblem = toSolution . flip execState emptyPA
+-- | Greedy Algorithm
+greedy :: Problem -> IO (Maybe Solution)
+greedy problem = run computation
+  where
+    -- Facilities sorted by cost incr
+    opts :: [FacilityType]
+    opts = problem ^. facilityTypes . to (sortBy (compare `on` view cost))
 
-greedy :: Problem -> Solution
-greedy problem = runProblem $ do
-  let ft = problem^.facilityTypes
-      locations = problem^.facilitiesLocation
-  forM (problem^.cities. to sortByPopulationDecr) $ \c -> do
-    primary <- assignBest Primary c ft locations
-    let locations' = filter (/= primary) locations     -- Primary != Secondary
-    void $ assignBest Secondary c ft locations'
+    minDistLoc :: MinDistLoc
+    minDistLoc = problem ^. dCenter
+
+    locations :: [Location]
+    locations = problem ^. facilitiesLocation
+
+    -- Sort cities by decreasing population
+    sortedCities :: [City]
+    sortedCities =
+      let sortDecr = sortBy (compare `on` view (cPopulation . to Down))
+       in problem ^. cities . to sortDecr
+
+    computation :: (MonadIO m, MonadState PA m) => m ()
+    computation = forM_ sortedCities $ \c -> do
+      primary <- assignBest Primary minDistLoc c opts locations
+      void $ assignBest Secondary minDistLoc c opts (filter (/= primary) locations)
+
+    run :: StateT PA IO () -> IO (Maybe Solution)
+    run problem = do
+      r <- try @Infeasible (execStateT problem emptyPA)
+      case r of
+        Left _ -> return Nothing
+        Right pa -> return $ Just (toSolution pa)
