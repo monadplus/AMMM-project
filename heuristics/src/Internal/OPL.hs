@@ -1,9 +1,9 @@
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Internal.OPL where
@@ -41,11 +41,10 @@ instance (OPL a) => OPL [a] where
 
   fromOPL lbs =
     let (content, _) = (takeUntil ']' . takeChar '[') lbs
-        splitContent = (LC.split ' ' content)^.. each . filtered (not . LC.null)
+        splitContent = (LC.split ' ' content) ^.. each . filtered (not . LC.null)
      in fromOPL <$> splitContent
 
 instance {-# OVERLAPPING #-} OPL [Location] where
-  -- | copied to avoid infinite loop
   toOPL xs =
     B.charUtf8 '['
       <> mconcat [B.charUtf8 ' ' <> toOPL x | x <- xs]
@@ -56,8 +55,8 @@ instance {-# OVERLAPPING #-} OPL [Location] where
     let toLocations lbs
           | LC.notElem '[' lbs = [] -- hack: If [ does not appear we are finished
           | otherwise =
-              let (x, rem) = takeUp ']' lbs
-               in x : toLocations rem
+            let (x, rem) = takeUp ']' lbs
+             in x : toLocations rem
      in (fmap fromOPL) . toLocations . takeChar '['
 
 instance OPL Location where
@@ -123,7 +122,12 @@ decodeUtf8OPL :: L.ByteString -> Problem
 decodeUtf8OPL lbs = Problem {..}
   where
     lines :: [L.ByteString]
-    lines = LC.lines lbs
+    lines =
+      filter (not . LC.isPrefixOf "#")
+        . filter (not . LC.isPrefixOf "//")
+        . fmap (LC.dropWhile (== ' '))
+        . filter (not . L.null)
+        $ LC.lines lbs
 
     getLine :: L.ByteString -> L.ByteString
     getLine key =
