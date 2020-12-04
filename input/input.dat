@@ -10,5 +10,5 @@
  cap = [18 14 5];
  cost = [50 45 15];
  
- d_center = 1.2;
- 
+ //d_center = 1.2;
+ d_center = 0.8;

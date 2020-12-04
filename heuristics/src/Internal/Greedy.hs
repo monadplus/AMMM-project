@@ -22,7 +22,6 @@ import Data.Ord
 import Internal.Types
 import Lens.Micro.Platform
 import Text.Printf
--- import Debug.Trace
 
 ------------------------------------------------
 
@@ -139,13 +138,13 @@ computeCost tier minDistLoc' (PA w) c facilityTypes l =
       case hasRange' && hasCapacity' of
         -- Feasible assignment
         True -> do
-          let updated = coerce $ Map.adjust (tierToLens tier <>~ [c]) l w
+          let updated = coerce $ Map.adjust (tierToLens tier %~ (c :)) l w
               costDiff = 0 :: Cost
           Just (costDiff, l, updated)
         -- Requires update of facility
         False -> do
           ft <- findFacilityType currentOccupacy
-          let updated = coerce $ Map.adjust (set aType ft) l w
+          let updated = coerce $ Map.adjust ((tierToLens tier %~ (c :)) . (set aType ft)) l w
               costDiff = (ft ^. cost) - oldCost
           Just (costDiff, l, updated)
   where
@@ -209,9 +208,7 @@ assignBest t minDistLoc c ft locations = do
     candidates -> pickBestAndUpdate candidates
   where
     pickBestAndUpdate candidates = do
-      liftIO $ print (candidates^..folded._1)
       let (_, location, newPA) = minimumBy (compare `on` view _1) candidates
-      liftIO $ print (c, location, t)
       put newPA
       return location
 
@@ -237,7 +234,6 @@ greedy problem = run computation
 
     computation :: (MonadIO m, MonadState PA m) => m ()
     computation = forM_ sortedCities $ \c -> do
-      liftIO $ print "======================="
       primary <- assignBest Primary minDistLoc c opts locations
       void $ assignBest Secondary minDistLoc c opts (filter (/= primary) locations)
 
@@ -246,4 +242,5 @@ greedy problem = run computation
       r <- try @Infeasible (execStateT problem emptyPA)
       case r of
         Left _ -> return Nothing
-        Right pa -> return $ Just (toSolution pa)
+        Right pa -> do
+          return $ Just (toSolution pa)
