@@ -50,7 +50,7 @@ instance {-# OVERLAPPING #-} OPL [Location] where
       <> mconcat [B.charUtf8 ' ' <> toOPL x | x <- xs]
       <> B.stringUtf8 " ]"
 
-  -- TODO Parsing this is not so easy without couting [ [5 2] [4 2] [2 1] [0 1] [1 0] [0 2] ]
+  -- TODO Parsing this is not so easy without counting [ [5 2] [4 2] [2 1] [0 1] [1 0] [0 2] ]
   fromOPL =
     let toLocations lbs
           | LC.notElem '[' lbs = [] -- hack: If [ does not appear we are finished
@@ -118,6 +118,7 @@ encodeUtf8OPL = B.toLazyByteString . problemBuilder
 -- | decodeUtf8OPL
 --
 -- >>> decodeUtf8OPL . encodeUtf8OPL == id
+-- TODO Next time use a parser combinator or a parser generator.
 decodeUtf8OPL :: L.ByteString -> Problem
 decodeUtf8OPL lbs = Problem {..}
   where
@@ -167,7 +168,7 @@ decodeUtf8OPL lbs = Problem {..}
     _dCenter = getLineContent "d_center"
 
     _cities :: [City]
-    _cities = uncurry City <$> zip posCities population
+    _cities = uncurry3 City <$> zip3 [0..] posCities population
 
     _facilityTypes :: [FacilityType]
     _facilityTypes = uncurry3 FacilityType <$> zip3 d_city cap cost

@@ -15,8 +15,12 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro.Platform
+import Data.Word
 
 -----------------------------------------------------------------
+
+newtype Id = Id { _unsafeId :: Word64 }
+  deriving newtype (Show, Eq, Ord, Num, Enum)
 
 data Location = Location
   { _x :: {-# UNPACK #-} !Int,
@@ -29,7 +33,8 @@ newtype Population = Population {_population :: Int}
   deriving newtype (Show, Eq, Ord)
 
 data City = City
-  { _cLocation :: Location,
+  { _cId :: Id,
+    _cLocation :: Location,
     _cPopulation :: Population
   }
   deriving stock (Show, Eq, Ord, Generic)
@@ -77,7 +82,7 @@ data Grid = Grid
   }
 
 newtype Distance = Distance {_distance :: Double}
-  deriving newtype (Num, Eq, Ord)
+  deriving newtype (Show, Num, Eq, Ord)
 
 makeLenses ''Location
 makeLenses ''Population

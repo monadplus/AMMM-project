@@ -22,6 +22,7 @@ import Data.Ord
 import Internal.Types
 import Lens.Micro.Platform
 import Text.Printf
+-- import Debug.Trace
 
 ------------------------------------------------
 
@@ -44,9 +45,11 @@ data LocationInfo = LocationInfo
     _aPrimary :: [City],
     _aSecondary :: [City]
   }
+  deriving stock Show
 
 -- | Partial Assignment
 newtype PA = PA {_pa :: Map Location LocationInfo}
+  deriving stock Show
 
 makeLenses ''LocationInfo
 makeLenses ''PA
@@ -121,9 +124,10 @@ computeCost tier minDistLoc' (PA w) c facilityTypes l =
         then do
           let currentOccupacy = getOccupacy Nothing
           ft <- findFacilityType currentOccupacy
-          let updated = coerce $ Map.adjust (set aType ft) l w
+          let locationInfo = (LocationInfo ft [] []) & tierToLens tier .~ [c]
+              updated = coerce $ Map.insert l locationInfo w
               costDiff = ft ^. cost
-          return (costDiff, l, updated)
+          Just (costDiff, l, updated)
         else -- Infeasible due to the min distance constraint.
           Nothing
 
@@ -143,7 +147,7 @@ computeCost tier minDistLoc' (PA w) c facilityTypes l =
           ft <- findFacilityType currentOccupacy
           let updated = coerce $ Map.adjust (set aType ft) l w
               costDiff = (ft ^. cost) - oldCost
-          return (costDiff, l, updated)
+          Just (costDiff, l, updated)
   where
     -- Minimum distance between locations.
     minDistLoc :: Distance
@@ -155,7 +159,7 @@ computeCost tier minDistLoc' (PA w) c facilityTypes l =
 
     checkMinDist :: Bool
     checkMinDist =
-      any (\l2 -> euclideanDistance l l2 >= minDistLoc) $ Map.keys w
+      all (\l2 -> l2 == l || euclideanDistance l l2 >= minDistLoc) $ Map.keys w
 
     hasRange :: Distance -> Bool
     hasRange maxDist = case tier of
@@ -202,10 +206,12 @@ assignBest t minDistLoc c ft locations = do
   w <- get
   case catMaybes (computeCost t minDistLoc w c ft <$> locations) of
     [] -> liftIO $ throwIO Infeasible
-    solutions -> pickBestAndUpdate solutions
+    candidates -> pickBestAndUpdate candidates
   where
     pickBestAndUpdate candidates = do
+      liftIO $ print (candidates^..folded._1)
       let (_, location, newPA) = minimumBy (compare `on` view _1) candidates
+      liftIO $ print (c, location, t)
       put newPA
       return location
 
@@ -231,6 +237,7 @@ greedy problem = run computation
 
     computation :: (MonadIO m, MonadState PA m) => m ()
     computation = forM_ sortedCities $ \c -> do
+      liftIO $ print "======================="
       primary <- assignBest Primary minDistLoc c opts locations
       void $ assignBest Secondary minDistLoc c opts (filter (/= primary) locations)
 

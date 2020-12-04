@@ -1,9 +1,9 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE RankNTypes #-}
 
 module Internal.Generators where
 
@@ -11,13 +11,13 @@ module Internal.Generators where
 
 import Control.Applicative (liftA2, liftA3)
 import Control.Monad.Reader
+import Data.Function
 import Data.Generics.Product.Typed
+import Data.List
 import Internal.Types
 import Lens.Micro.Platform
 import qualified System.Random.MWC as R
 import qualified System.Random.MWC.Distributions as R
-import Data.List
-import Data.Function
 
 ----------------------------------------------
 
@@ -97,7 +97,7 @@ sample n = runReaderT genProblem =<< R.createSystemRandom
       return . ceiling . abs $ cost
 
     genCity :: HasGenIO r m => Grid -> m City
-    genCity grid = liftA2 City (genLocation grid) genPopulation
+    genCity grid = liftA2 (City 0) (genLocation grid) genPopulation
 
     genFacilityType :: HasGenIO r m => Grid -> Int -> Int -> m FacilityType
     genFacilityType grid nCities nLocations =
@@ -115,11 +115,11 @@ sample n = runReaderT genProblem =<< R.createSystemRandom
       nLocations <- uniform 0.2 (floor (fromIntegral n / 2 :: Double))
       nTypes <- uniform 0.2 (floor (fromIntegral n / 3 :: Double))
 
-      _cities' <- replicateM nCities (genCity grid)
-      _facilitiesLocation' <- replicateM nLocations (genLocation grid)
+      _cities <-
+        zipWith (\id -> cId .~ id) [0 ..]
+          . nubByLocation cLocation
+          <$> replicateM nCities (genCity grid)
+      _facilitiesLocation <- nubByLocation id <$> replicateM nLocations (genLocation grid)
       _facilityTypes <- replicateM nTypes (genFacilityType grid nCities nLocations)
       _dCenter <- genDistCenter
-      let _cities = nubByLocation cLocation _cities'
-          _facilitiesLocation = nubByLocation id _facilitiesLocation'
-
       return $ Problem {..}
