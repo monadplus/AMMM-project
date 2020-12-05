@@ -3,6 +3,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE DerivingVia #-}
 
 module Internal.Types where
 
@@ -16,8 +18,29 @@ import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro.Platform
 import Data.Word
+import Data.Semigroup(Sum(..))
 
 -----------------------------------------------------------------
+
+-- | Metaheuristic algorithm type.
+data Algorithm
+  = Greedy (Maybe LocalSearchStrategy)
+  | GRASP
+  deriving stock Show
+
+data LocalSearchStrategy
+  = FirstImprovement
+  | BestImprovement
+  deriving stock Show
+
+-- | Cost of the facility
+type Cost = Int
+
+-- | Facility occupancy
+type Occupancy = Double
+
+-- | Minimum distance between facilities
+type MinDistLoc = Double
 
 newtype Id = Id { _unsafeId :: Word64 }
   deriving newtype (Show, Eq, Ord, Num, Enum)
@@ -30,7 +53,7 @@ data Location = Location
 
 newtype Population = Population {_population :: Int}
   deriving stock (Generic)
-  deriving newtype (Show, Eq, Ord)
+  deriving newtype (Show, Eq, Ord, Enum, Num, Real, Integral)
 
 data City = City
   { _cId :: Id,
@@ -43,7 +66,7 @@ data City = City
 data FacilityType = FacilityType
   { _dCity :: Double,
     _cap :: Int,
-    _cost :: Int
+    _cost :: Cost
   }
   deriving stock (Show, Eq, Ord, Generic)
 
@@ -51,7 +74,7 @@ data Problem = Problem
   { _cities :: [City],
     _facilitiesLocation :: [Location],
     _facilityTypes :: [FacilityType],
-    _dCenter :: Double
+    _dCenter :: MinDistLoc
   }
   deriving stock (Show, Eq)
 
@@ -82,7 +105,8 @@ data Grid = Grid
   }
 
 newtype Distance = Distance {_distance :: Double}
-  deriving newtype (Show, Num, Eq, Ord)
+  deriving newtype (Show, Num, Eq, Ord, Fractional)
+  deriving (Semigroup, Monoid) via (Sum Double)
 
 makeLenses ''Location
 makeLenses ''Population
@@ -94,6 +118,10 @@ makeLenses ''Assignment
 makeLenses ''Solution
 makeLenses ''Grid
 makeLenses ''Distance
+
+getOccupancy :: Tier -> City -> Occupancy
+getOccupancy Primary = fromIntegral . view cPopulation
+getOccupancy Secondary = (0.1*) . fromIntegral . view cPopulation
 
 pow2 :: Int -> Double
 pow2 x = fromIntegral $ x ^ (2 :: Int)

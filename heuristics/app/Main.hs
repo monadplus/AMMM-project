@@ -1,5 +1,5 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Main where
 
@@ -10,11 +10,6 @@ import Heuristics
 import Options.Applicative
 
 -----------------------------------------------
-
-data Algorithm
-  = Greedy Bool
-  | GRASP
-  deriving stock Show
 
 data Config
   = SolverConfig FilePath Algorithm
@@ -60,29 +55,41 @@ solverParser =
       )
     <*> algorithmParser
 
-
 algorithmParser :: Parser Algorithm
 algorithmParser =
-    f <$> flag (Greedy False) GRASP
-        ( long "GRASP"
-        <> short 'g'
-        <> help "Pick an algorithm" )
-      <*> switch
-        ( long "local search"
-        <> short 'l'
-        <> help "Adds a Local Search for the Greedy Algorithm" )
+  f
+    <$> flag
+      (Greedy Nothing)
+      GRASP
+      ( long "grasp"
+          <> short 'g'
+          <> showDefault
+          <> help "Use GRASP instead of a Greedy algorihtm."
+      )
+    <*> switch
+      ( long "localSearch"
+          <> short 'l'
+          <> help "Adds a local search phase in the greedy algorithm."
+      )
+    <*> flag
+      FirstImprovement
+      BestImprovement
+      ( long "bestImprovement"
+          <> short 'b'
+          <> showDefault
+          <> help "Use Best Improvement instead of First Improvement"
+      )
   where
-    f (Greedy _) localSearch = Greedy localSearch
-    f GRASP _ = GRASP
+    f (Greedy _) False _ = Greedy Nothing
+    f (Greedy _) True strategy = Greedy (Just strategy)
+    f GRASP _ _ = GRASP
 
 run :: Config -> IO ()
 run = \case
-  (GenConfig fp n) -> genSample (addSizetoFile fp n) n
+  (GenConfig fp n) ->
+    genSample (addSizetoFile fp n) n
   SolverConfig fp algorithm ->
-    case algorithm of
-      Greedy False -> runGreedy fp
-      -- TODO
-      _ -> error "not implemented"
+    runAlgorithm fp algorithm
 
 addSizetoFile :: FilePath -> Int -> FilePath
 addSizetoFile fp n =
