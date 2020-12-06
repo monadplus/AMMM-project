@@ -1,11 +1,13 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module Internal.Heuristics where
 
@@ -13,23 +15,25 @@ module Internal.Heuristics where
 
 import Control.Exception
 import Control.Monad
+import Control.Monad.Reader
 import Control.Monad.State.Lazy
 import Data.Coerce
+import Data.Default
 import Data.Function
 import Data.List
 import Data.Map.Strict (Map, (!))
 import qualified Data.Map.Strict as Map
 import Data.Maybe
 import Data.Ord
+import Data.Time.Clock.System
+import Data.Word
 import Internal.Types
 import Lens.Micro.Platform
+import System.Random.MWC (GenIO)
+import qualified System.Random.MWC as R
 import Text.Printf
 
 ------------------------------------------------
-
-data Infeasible = Infeasible
-  deriving stock (Show)
-  deriving anyclass (Exception)
 
 -- | Information related to location
 data LocationInfo = LocationInfo
@@ -39,16 +43,10 @@ data LocationInfo = LocationInfo
   }
   deriving stock (Show)
 
--- | Partial Assignment
+-- | Partial assignment
 newtype PA = PA {_pa :: Map Location LocationInfo}
   deriving stock (Show)
-
-makeLenses ''LocationInfo
-makeLenses ''PA
-
--- | Empty Partial Assignment
-emptyPA :: PA
-emptyPA = PA Map.empty
+  deriving newtype (Default)
 
 data UpdateCmd = UpdateCmd
   { _previousFacility :: Location,
@@ -59,11 +57,56 @@ data UpdateCmd = UpdateCmd
     _costImprovement :: Cost
   }
 
-makeLenses ''UpdateCmd
+-- | Read-only configuration
+data Config = Config
+  { _cMinDistLoc :: MinDistLoc,
+    _cFacilityTypes :: [FacilityType],
+    _cAlpha :: Alpha,
+    _cGen :: GenIO
+  }
 
--- | From a Partial Assignment to a Solution
---
--- This is just data manipulation
+-- | Infeasible exception
+data Infeasible = Infeasible
+  deriving stock (Show)
+  deriving anyclass (Exception)
+
+type RTS m = (MonadIO m, MonadReader Config m, MonadState PA m)
+
+type Candidate = (Cost, Location, PA)
+
+-- | Restricted Candidates List
+newtype RCL = RCL {_candidates :: [Candidate]}
+  deriving newtype (Default)
+
+-- | GRASP loop state
+data GRASPState = GRASPState
+  { _gsBest :: Maybe (Solution, Cost),
+    _gsStartTime :: SystemTime,
+    _gsGen :: GenIO,
+    -- | Number of iterations without improvement
+    _gsIterations :: Int
+  }
+
+type GRASPMonad = StateT GRASPState IO
+
+makeLenses ''LocationInfo
+makeLenses ''PA
+makeLenses ''UpdateCmd
+makeLenses ''Config
+makeLenses ''RCL
+makeLenses ''GRASPState
+
+-- | Tier lens like
+tierToLens :: Tier -> Lens LocationInfo LocationInfo [City] [City]
+tierToLens Primary = aPrimary
+tierToLens Secondary = aSecondary
+
+-- | Returns the first element that maps into something.
+fstMaybe :: (a -> Maybe b) -> [a] -> Maybe b
+fstMaybe _ [] = Nothing
+fstMaybe f (x : xs) = maybe (fstMaybe f xs) pure $ f x
+
+-- | From a partial assignment to a solution.
 toSolution :: PA -> Solution
 toSolution =
   coerce
@@ -91,11 +134,6 @@ toSolution =
         _ -> error "Expecting a primary and a secondary facility"
     toAssignment xs = error $ printf "Expecting 2 facilities but got %d" (length xs)
 
--- | Tier lens like
-tierToLens :: Tier -> Lens LocationInfo LocationInfo [City] [City]
-tierToLens Primary = aPrimary
-tierToLens Secondary = aSecondary
-
 -- | 'Nothing' if the assignment is not feasible. Otherwise, the cost difference.
 --
 -- Constraints:
@@ -118,7 +156,7 @@ computeCost ::
   City ->
   [FacilityType] ->
   Location ->
-  Maybe (Cost, Location, PA)
+  Maybe Candidate
 computeCost tier minDistLoc' (PA w) c facilityTypes l =
   case Map.lookup l w of
     -- The location doesn't have a facility
@@ -191,28 +229,35 @@ computeCost tier minDistLoc' (PA w) c facilityTypes l =
             hasCapacity' = currentOccupancy <= maxCapacity
          in hasRange' && hasCapacity'
 
+-- | Compute the occupancy of a facility.
 toOccupancy :: LocationInfo -> Occupancy
 toOccupancy locInfo =
   let getPop tier = fromIntegral . sum $ locInfo ^.. (tierToLens tier) . folded . cPopulation . population
    in (getPop Primary) + 0.1 * (getPop Secondary)
 
+-- | Safe version of maximum that works on empty lists.
 maximumSafe :: (Ord a) => a -> [a] -> a
 maximumSafe a [] = a
 maximumSafe _ xs = maximum xs
-
 
 -- | Minimum distance required by a 'FacilityType' to handle the cities associated with the given 'Facility'.
 toMinDist :: Location -> LocationInfo -> Distance
 toMinDist facility locInfo =
   let minDist tier =
-        maximumSafe (0 :: Distance)
-          $ locInfo^.. (tierToLens tier) . folded . cLocation . to (euclideanDistance facility)
+        maximumSafe (0 :: Distance) $
+          locInfo ^.. (tierToLens tier) . folded . cLocation . to (euclideanDistance facility)
    in max (minDist Primary) ((minDist Secondary) / 3)
 
 -- TODO implement BestImprovement
 -- TODO improve by secondary assignments
--- FacilityTypes are sorted!
-runLocalSearch :: LocalSearchStrategy -> [FacilityType] -> PA -> PA
+
+-- | Local search procedure
+runLocalSearch ::
+  LocalSearchStrategy ->
+  -- | Facility tpes sorted in increasing order of cost
+  [FacilityType] ->
+  PA ->
+  PA
 runLocalSearch BestImprovement _ _ = error "Not implemented"
 runLocalSearch FirstImprovement opts (PA solution) =
   let occupancyInfo = Map.map toOccupancy (coerce solution)
@@ -246,7 +291,7 @@ runLocalSearch FirstImprovement opts (PA solution) =
           -- Reassigning this city doesn't improve the solution.
           Nothing -> Nothing
           -- Reassigning improves the solution but we need to find a feasible assignment.
-          Just (newFacilityType, cost) -> case find (\l2 -> l1/= l2 && isValid l2 && hasResources l2) (Map.keys pa) of
+          Just (newFacilityType, cost) -> case find (\l2 -> l1 /= l2 && isValid l2 && hasResources l2) (Map.keys pa) of
             -- The city cannot be reassigned to another facility.
             Nothing -> Nothing
             -- A better solution was found.
@@ -279,7 +324,7 @@ runLocalSearch FirstImprovement opts (PA solution) =
             hasResources l2 =
               let newOccupancy = (facilityOccupancy ! l2) + (getOccupancy Primary c)
                   maxCap = (pa ! l2) ^. aType . cap
-              in newOccupancy <= (fromIntegral maxCap)
+               in newOccupancy <= (fromIntegral maxCap)
 
         -- Remove the occupancy from the old facility
         -- and add it to the new facility.
@@ -304,39 +349,71 @@ runLocalSearch FirstImprovement opts (PA solution) =
               )
               l1
 
--- | Returns the first element that maps into something.
-fstMaybe :: (a -> Maybe b) -> [a] -> Maybe b
-fstMaybe _ [] = Nothing
-fstMaybe f (x : xs) = maybe (fstMaybe f xs) pure $ f x
+-- | Returns a uniform value \( x \in [0, range - 1] \)
+uniform :: (MonadIO m, MonadReader Config m) => Int -> m Int
+uniform range = view cGen >>= liftIO . R.uniformR (0, range - 1)
 
--- | Given a city c computes the best assignment wrt the current partial solution
-assignBest ::
-  (MonadIO m, MonadState PA m) =>
+-- | Compute the Restricted Candidates List
+computeRCL :: MonadReader Config m => [Candidate] -> m RCL
+computeRCL [] = return def
+computeRCL candidates = do
+  (alpha :: Double) <- view (cAlpha . to coerce)
+  return . coerce $
+    filter
+      ( \(q', _, _) ->
+          let q = fromIntegral q'
+           in q <= q_min + alpha * (q_max - q_min)
+      )
+      candidates
+  where
+    q_all = sort $ candidates ^.. folded . _1 . to fromIntegral
+    q_min = head q_all
+    q_max = last q_all
+
+-- | Choose one candidate uniformly at random
+chooseCandidate :: (MonadIO m, MonadReader Config m) => RCL -> m Candidate
+chooseCandidate (RCL candidates) = (candidates !!) <$> uniform (length candidates)
+
+-- | Given a city c computes the best assignment wrt the current partial solution.
+-- The parameter \( \alpha \) controls the randomization of the  constructive part.
+assignCandidate ::
+  RTS m =>
   Tier ->
-  MinDistLoc ->
   City ->
-  [FacilityType] ->
   [Location] ->
   m Location
-assignBest t minDistLoc c ft locations = do
+assignCandidate t c locations = do
   w <- get
-  case catMaybes (computeCost t minDistLoc w c ft <$> locations) of
-    [] -> liftIO $ throwIO Infeasible
-    candidates -> pickBestAndUpdate candidates
-  where
-    pickBestAndUpdate candidates = do
-      let (_, location, newPA) = minimumBy (compare `on` view _1) candidates
-      put newPA
-      return location
+  (Config minDistLoc ft _ _) <- ask
+  let solutions = catMaybes (computeCost t minDistLoc w c ft <$> locations)
+  rcl <- computeRCL solutions
+  if rcl ^. candidates . to null
+    then liftIO $ throwIO Infeasible
+    else do
+      (_, candidate, updatedAssignment) <- chooseCandidate rcl
+      put updatedAssignment
+      return candidate
+
+-- FIXME scary cast Int64 -> Word64
+diffInSeconds :: SystemTime -> SystemTime -> Seconds
+diffInSeconds (MkSystemTime t1 _) (MkSystemTime t2 _) =
+  coerce (fromIntegral $ abs (t1 - t2) :: Word64)
 
 -- | Heuristic Algorithms
--- TODO GRASP
 runAlgorithm' :: Problem -> Algorithm -> IO (Maybe Solution)
-runAlgorithm' problem algorithm = run computation
+runAlgorithm' problem algorithm = do
+  gen <- R.createSystemRandom
+  t1 <- getSystemTime
+  evalStateT loop (GRASPState Nothing t1 gen 0)
   where
     -- Facilities sorted by cost incr
     opts :: [FacilityType]
     opts = problem ^. facilityTypes . to (sortBy (compare `on` view cost))
+
+    -- Maximum number of iterations without improvement
+    -- before the execution stops
+    maxIterationsWithoutImprovement :: Int
+    maxIterationsWithoutImprovement = 100
 
     minDistLoc :: MinDistLoc
     minDistLoc = problem ^. dCenter
@@ -344,27 +421,72 @@ runAlgorithm' problem algorithm = run computation
     locations :: [Location]
     locations = problem ^. facilitiesLocation
 
+    timeLimitSeconds :: Seconds
+    timeLimitSeconds = fromMaybe 0 $ algorithm ^? timeLimit
+
+    alpha :: Alpha
+    alpha = fromMaybe 0 $ algorithm ^? threshold
+
     -- Sort cities by decreasing population
     sortedCities :: [City]
     sortedCities =
       let sortDecr = sortBy (compare `on` view (cPopulation . to Down))
        in problem ^. cities . to sortDecr
 
-    computation :: (MonadIO m, MonadState PA m) => m ()
+    computation :: RTS m => m ()
     computation = forM_ sortedCities $ \c -> do
-      primary <- assignBest Primary minDistLoc c opts locations
-      void $ assignBest Secondary minDistLoc c opts (filter (/= primary) locations)
+      primary <- assignCandidate Primary c locations
+      void $ assignCandidate Secondary c (filter (/= primary) locations)
 
-    run :: StateT PA IO () -> IO (Maybe Solution)
-    run problem = do
-      r <- try @Infeasible (execStateT problem emptyPA)
+    run problem gen = do
+      let config = Config minDistLoc opts alpha gen
+      r <- try @Infeasible $ runReaderT (execStateT problem def) config
       case r of
-        Left _ -> return Nothing
+        -- Infeasible solution
+        Left _ ->
+          return Nothing
+        -- Feasible solution
         Right pa -> do
           case algorithm of
             Greedy Nothing ->
               return . Just $ toSolution pa
-            Greedy (Just strategy) -> do
+            Greedy (Just strategy) ->
               return . Just . toSolution . runLocalSearch strategy opts $ pa
-            GRASP ->
-              error "Not implemented"
+            GRASP _ _ ->
+              return . Just . toSolution . runLocalSearch FirstImprovement opts $ pa
+
+    -- Loop until the time limit is reached.
+    loop :: GRASPMonad (Maybe Solution)
+    loop = do
+      r <- liftIO . run computation =<< use gsGen
+      updated <- updateBest r
+      let f = if updated then const 0 else (+ 1)
+      it <- (gsIterations <<%= f)
+      let hasImprovedRecently = it < maxIterationsWithoutImprovement
+      timeLimitReached <- checkTimeLimit
+      -- Stop after 10 iterations without improvement
+      -- or when the time limit is reached
+      let stop = not hasImprovedRecently || timeLimitReached
+      if stop
+        then (fmap fst) <$> use gsBest
+        else loop
+
+    updateBest :: Maybe Solution -> GRASPMonad Bool
+    updateBest Nothing = return False
+    updateBest (Just newSolution) = do
+      let newCost = computeObjectiveValue newSolution
+      r <- use gsBest
+      case r of
+        Nothing ->
+          gsBest ?= (newSolution, newCost) >> return True
+        Just (_, bestCost) ->
+          if newCost < bestCost
+            then gsBest ?= (newSolution, newCost) >> return True
+            else return False
+
+    checkTimeLimit :: GRASPMonad Bool
+    checkTimeLimit = do
+      t1 <- use gsStartTime
+      t2 <- liftIO $ getSystemTime
+      let elapsedTimeSeconds = diffInSeconds t1 t2
+      return (elapsedTimeSeconds >= timeLimitSeconds)

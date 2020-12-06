@@ -1,10 +1,10 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE DerivingVia #-}
 
 module Internal.Types where
 
@@ -14,24 +14,38 @@ import Data.Coerce
 import Data.Generics.Product.Types
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Semigroup (Sum (..))
 import qualified Data.Set as Set
+import Data.Word
 import GHC.Generics (Generic)
 import Lens.Micro.Platform
-import Data.Word
-import Data.Semigroup(Sum(..))
 
 -----------------------------------------------------------------
 
--- | Metaheuristic algorithm type.
-data Algorithm
-  = Greedy (Maybe LocalSearchStrategy)
-  | GRASP
-  deriving stock Show
-
 data LocalSearchStrategy
-  = FirstImprovement
-  | BestImprovement
-  deriving stock Show
+  = -- | Stop as soon as you find an improvement
+    FirstImprovement
+  | -- | Find all improvement and pick the best one
+    BestImprovement
+  deriving stock (Show)
+
+newtype Alpha = Alpha {_alpha :: Double}
+  deriving newtype (Show, Read, Eq, Ord, Num, Fractional)
+
+newtype Seconds = Seconds {_seconds :: Word64}
+  deriving newtype (Show, Read, Eq, Ord, Num)
+
+-- | Metaheuristic algorithm
+data Algorithm
+  = Greedy
+      { -- | 'Nothing' to disable Local Search
+        _strategy :: Maybe LocalSearchStrategy
+      }
+  | GRASP
+      { _threshold :: Alpha,
+        _timeLimit :: Seconds
+      }
+  deriving stock (Show)
 
 -- | Cost of the facility
 type Cost = Int
@@ -42,7 +56,7 @@ type Occupancy = Double
 -- | Minimum distance between facilities
 type MinDistLoc = Double
 
-newtype Id = Id { _unsafeId :: Word64 }
+newtype Id = Id {_unsafeId :: Word64}
   deriving newtype (Show, Eq, Ord, Num, Enum)
 
 data Location = Location
@@ -118,10 +132,13 @@ makeLenses ''Assignment
 makeLenses ''Solution
 makeLenses ''Grid
 makeLenses ''Distance
+makeLenses ''Algorithm -- Notice this generates Traversal' for lenses that do not appear in all cases.
+makeLenses ''Alpha
+makeLenses ''Seconds
 
 getOccupancy :: Tier -> City -> Occupancy
 getOccupancy Primary = fromIntegral . view cPopulation
-getOccupancy Secondary = (0.1*) . fromIntegral . view cPopulation
+getOccupancy Secondary = (0.1 *) . fromIntegral . view cPopulation
 
 pow2 :: Int -> Double
 pow2 x = fromIntegral $ x ^ (2 :: Int)
@@ -145,11 +162,11 @@ euclideanDistance l1 l2 = coerce $ sqrt (f x + f y)
   where
     f l = pow2 (l2 ^. l - l1 ^. l)
 
-computeObjectiveValue :: Solution -> Double
+computeObjectiveValue :: Solution -> Cost
 computeObjectiveValue solution =
   Set.foldl'
     (\acc facility -> acc + facilityCost facility)
-    (0.0 :: Double)
+    (0 :: Cost)
     (Set.fromList facilities)
   where
     assignments :: [Assignment]
@@ -158,5 +175,5 @@ computeObjectiveValue solution =
     facilities :: [Facility]
     facilities = concat (toListOf (types @Facility) <$> assignments)
 
-    facilityCost :: Facility -> Double
-    facilityCost = view (fType . cost . to fromIntegral)
+    facilityCost :: Facility -> Cost
+    facilityCost = view (fType . cost)

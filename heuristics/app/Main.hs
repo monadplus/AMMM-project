@@ -30,12 +30,7 @@ configParser =
 genParser :: Parser Config
 genParser =
   GenConfig
-    <$> strOption
-      ( long "file"
-          <> short 'f'
-          <> help "Output file"
-          <> metavar "STRING"
-      )
+    <$> fileParser "Output file"
     <*> option
       auto
       ( long "size"
@@ -47,26 +42,16 @@ genParser =
 solverParser :: Parser Config
 solverParser =
   SolverConfig
-    <$> strOption
-      ( long "file"
-          <> short 'f'
-          <> help "Output file"
-          <> metavar "STRING"
+    <$> fileParser "Input file"
+    <*> hsubparser
+      ( command "greedy" (info greedySolverParser (progDesc "Greedy Algorithm"))
+          <> command "grasp" (info graspSolverParser (progDesc "GRASP Algorithm"))
       )
-    <*> algorithmParser
 
-algorithmParser :: Parser Algorithm
-algorithmParser =
+greedySolverParser :: Parser Algorithm
+greedySolverParser =
   f
-    <$> flag
-      (Greedy Nothing)
-      GRASP
-      ( long "grasp"
-          <> short 'g'
-          <> showDefault
-          <> help "Use GRASP instead of a Greedy algorihtm."
-      )
-    <*> switch
+    <$> switch
       ( long "localSearch"
           <> short 'l'
           <> help "Adds a local search phase in the greedy algorithm."
@@ -80,9 +65,39 @@ algorithmParser =
           <> help "Use Best Improvement instead of First Improvement"
       )
   where
-    f (Greedy _) False _ = Greedy Nothing
-    f (Greedy _) True strategy = Greedy (Just strategy)
-    f GRASP _ _ = GRASP
+    f False _ = Greedy Nothing
+    f True strategy = Greedy (Just strategy)
+
+graspSolverParser :: Parser Algorithm
+graspSolverParser =
+  GRASP
+    <$> option
+      auto
+      ( long "threshold"
+          <> short 't'
+          <> help "Solution's Quality Treshold"
+          <> showDefault
+          <> value 0.5
+          <> metavar "[0,1]"
+      )
+    <*> option
+      auto
+      ( long "limit"
+          <> short 'l'
+          <> help "Time Limit"
+          <> showDefault
+          <> value 60
+          <> metavar "SECONDS"
+      )
+
+fileParser :: String -> Parser FilePath
+fileParser helpMsg =
+  strOption
+    ( long "file"
+        <> short 'f'
+        <> help helpMsg
+        <> metavar "FILE"
+    )
 
 run :: Config -> IO ()
 run = \case

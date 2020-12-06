@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Internal.Pretty where
 
 -------------------------------------------
@@ -16,11 +18,11 @@ printSolution = liftIO . putStr . prettySolution
 
 prettySolution :: Solution -> String
 prettySolution solution =
-  prettyObjectiveValue solution
-    <> Map.foldlWithKey' go mempty (coerce solution)
+    Map.foldlWithKey' go mempty (coerce solution)
+    <> prettyObjectiveValue solution
   where
     prettyObjectiveValue :: Solution -> String
-    prettyObjectiveValue = printf "Objective value %.2f\n" . computeObjectiveValue
+    prettyObjectiveValue = printf "\nObjective value: %d\n" . coerce @Cost @Int . computeObjectiveValue
 
     go :: String -> City -> Assignment -> String
     go acc c a = acc <> pretty c a
