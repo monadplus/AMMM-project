@@ -1,0 +1,188 @@
+============ heuristics/examples/huge.dat ================
+Objective value 335
+Location 1 contains a logistic center of type 8
+Location 8 contains a logistic center of type 8
+Location 16 contains a logistic center of type 7
+Location 18 contains a logistic center of type 8
+City 1 is server by
+* primary center in location 8 (distance 7.810249676)
+* secondary center at location 1 (distance 8.062257748)
+City 2 is server by
+* primary center in location 16 (distance 2.236067977)
+* secondary center at location 1 (distance 0)
+City 3 is server by
+* primary center in location 8 (distance 3.16227766)
+* secondary center at location 1 (distance 3.16227766)
+City 4 is server by
+* primary center in location 16 (distance 5)
+* secondary center at location 8 (distance 6.32455532)
+City 5 is server by
+* primary center in location 16 (distance 1.414213562)
+* secondary center at location 8 (distance 6.403124237)
+City 6 is server by
+* primary center in location 1 (distance 7.071067812)
+* secondary center at location 8 (distance 3.16227766)
+City 7 is server by
+* primary center in location 18 (distance 2.236067977)
+* secondary center at location 8 (distance 6.708203932)
+City 8 is server by
+* primary center in location 8 (distance 7.615773106)
+* secondary center at location 1 (distance 5.830951895)
+City 9 is server by
+* primary center in location 8 (distance 7.615773106)
+* secondary center at location 1 (distance 5.830951895)
+City 10 is server by
+* primary center in location 8 (distance 3)
+* secondary center at location 1 (distance 6.403124237)
+City 11 is server by
+* primary center in location 1 (distance 7)
+* secondary center at location 8 (distance 3.605551275)
+City 12 is server by
+* primary center in location 8 (distance 3.16227766)
+* secondary center at location 1 (distance 7.071067812)
+City 13 is server by
+* primary center in location 18 (distance 9.219544457)
+* secondary center at location 8 (distance 7.280109889)
+City 14 is server by
+* primary center in location 18 (distance 6.708203932)
+* secondary center at location 8 (distance 8.062257748)
+City 15 is server by
+* primary center in location 1 (distance 5.830951895)
+* secondary center at location 8 (distance 3.16227766)
+City 16 is server by
+* primary center in location 18 (distance 10.198039027)
+* secondary center at location 8 (distance 10)
+City 17 is server by
+* primary center in location 18 (distance 8.062257748)
+* secondary center at location 8 (distance 7.810249676)
+City 18 is server by
+* primary center in location 1 (distance 9.055385138)
+* secondary center at location 8 (distance 7.615773106)
+City 19 is server by
+* primary center in location 16 (distance 6)
+* secondary center at location 1 (distance 5.385164807)
+City 20 is server by
+* primary center in location 1 (distance 2)
+* secondary center at location 8 (distance 2.828427125)
+City 21 is server by
+* primary center in location 1 (distance 4.123105626)
+* secondary center at location 8 (distance 3.605551275)
+City 22 is server by
+* primary center in location 18 (distance 3)
+* secondary center at location 8 (distance 2.236067977)
+City 23 is server by
+* primary center in location 1 (distance 4.123105626)
+* secondary center at location 8 (distance 8.062257748)
+City 24 is server by
+* primary center in location 18 (distance 7)
+* secondary center at location 8 (distance 3.605551275)
+City 25 is server by
+* primary center in location 1 (distance 8.246211251)
+* secondary center at location 8 (distance 8.485281374)
+City 26 is server by
+* primary center in location 1 (distance 1)
+* secondary center at location 18 (distance 7.810249676)
+City 27 is server by
+* primary center in location 18 (distance 1)
+* secondary center at location 8 (distance 4.123105626)
+City 28 is server by
+* primary center in location 1 (distance 8.94427191)
+* secondary center at location 8 (distance 6)
+City 29 is server by
+* primary center in location 1 (distance 4.123105626)
+* secondary center at location 18 (distance 11.180339887)
+City 30 is server by
+* primary center in location 8 (distance 2)
+* secondary center at location 1 (distance 4)
+City 31 is server by
+* primary center in location 1 (distance 10.816653826)
+* secondary center at location 8 (distance 7.280109889)
+City 32 is server by
+* primary center in location 18 (distance 6.32455532)
+* secondary center at location 8 (distance 7.211102551)
+City 33 is server by
+* primary center in location 1 (distance 9.848857802)
+* secondary center at location 18 (distance 10.440306509)
+City 34 is server by
+* primary center in location 1 (distance 7.071067812)
+* secondary center at location 8 (distance 3.16227766)
+City 35 is server by
+* primary center in location 1 (distance 9.848857802)
+* secondary center at location 8 (distance 10.630145813)
+City 36 is server by
+* primary center in location 8 (distance 7.615773106)
+* secondary center at location 1 (distance 3.16227766)
+City 37 is server by
+* primary center in location 1 (distance 7.071067812)
+* secondary center at location 8 (distance 4.242640687)
+City 38 is server by
+* primary center in location 8 (distance 3)
+* secondary center at location 1 (distance 2.236067977)
+City 39 is server by
+* primary center in location 16 (distance 5.099019514)
+* secondary center at location 18 (distance 6.708203932)
+City 40 is server by
+* primary center in location 8 (distance 4.472135955)
+* secondary center at location 1 (distance 0)
+City 41 is server by
+* primary center in location 1 (distance 9)
+* secondary center at location 8 (distance 8.062257748)
+City 42 is server by
+* primary center in location 1 (distance 8.602325267)
+* secondary center at location 8 (distance 4.242640687)
+City 43 is server by
+* primary center in location 18 (distance 6.708203932)
+* secondary center at location 8 (distance 2.236067977)
+City 44 is server by
+* primary center in location 8 (distance 7.615773106)
+* secondary center at location 1 (distance 3.16227766)
+City 45 is server by
+* primary center in location 18 (distance 3.605551275)
+* secondary center at location 1 (distance 5)
+City 46 is server by
+* primary center in location 16 (distance 10.770329614)
+* secondary center at location 18 (distance 5)
+City 47 is server by
+* primary center in location 1 (distance 3.16227766)
+* secondary center at location 18 (distance 7.615773106)
+City 48 is server by
+* primary center in location 8 (distance 2.236067977)
+* secondary center at location 1 (distance 3.605551275)
+City 49 is server by
+* primary center in location 16 (distance 0)
+* secondary center at location 1 (distance 2.236067977)
+City 50 is server by
+* primary center in location 18 (distance 6.32455532)
+* secondary center at location 8 (distance 2)
+City 51 is server by
+* primary center in location 18 (distance 10)
+* secondary center at location 1 (distance 2)
+City 52 is server by
+* primary center in location 8 (distance 7.211102551)
+* secondary center at location 1 (distance 8)
+City 53 is server by
+* primary center in location 16 (distance 8.062257748)
+* secondary center at location 1 (distance 7.071067812)
+City 54 is server by
+* primary center in location 18 (distance 2)
+* secondary center at location 8 (distance 2.828427125)
+City 55 is server by
+* primary center in location 1 (distance 5.830951895)
+* secondary center at location 8 (distance 7.615773106)
+City 56 is server by
+* primary center in location 16 (distance 12.041594579)
+* secondary center at location 8 (distance 5.830951895)
+City 57 is server by
+* primary center in location 16 (distance 7.615773106)
+* secondary center at location 8 (distance 1)
+City 58 is server by
+* primary center in location 16 (distance 10.295630141)
+* secondary center at location 18 (distance 3.605551275)
+City 59 is server by
+* primary center in location 18 (distance 8.062257748)
+* secondary center at location 8 (distance 7.810249676)
+City 60 is server by
+* primary center in location 16 (distance 9.219544457)
+* secondary center at location 8 (distance 3.16227766)
+Execution time: 600278.694091797ms
+============================================

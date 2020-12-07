@@ -1,0 +1,4 @@
+============ heuristics/examples/sample_50.dat ================
+Objective value 140
+Execution time: 60913.073974609ms
+============================================

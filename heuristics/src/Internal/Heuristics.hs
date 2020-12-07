@@ -394,7 +394,6 @@ assignCandidate t c locations = do
       put updatedAssignment
       return candidate
 
--- FIXME scary cast Int64 -> Word64
 diffInSeconds :: SystemTime -> SystemTime -> Seconds
 diffInSeconds (MkSystemTime t1 _) (MkSystemTime t2 _) =
   coerce (fromIntegral $ abs (t1 - t2) :: Word64)
@@ -413,7 +412,7 @@ runAlgorithm' problem algorithm = do
     -- Maximum number of iterations without improvement
     -- before the execution stops
     maxIterationsWithoutImprovement :: Int
-    maxIterationsWithoutImprovement = 100
+    maxIterationsWithoutImprovement = 1000
 
     minDistLoc :: MinDistLoc
     minDistLoc = problem ^. dCenter
@@ -464,7 +463,7 @@ runAlgorithm' problem algorithm = do
       it <- (gsIterations <<%= f)
       let hasImprovedRecently = it < maxIterationsWithoutImprovement
       timeLimitReached <- checkTimeLimit
-      -- Stop after 10 iterations without improvement
+      -- Stop after n iterations without improvement
       -- or when the time limit is reached
       let stop = not hasImprovedRecently || timeLimitReached
       if stop

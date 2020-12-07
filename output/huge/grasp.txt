@@ -1,0 +1,9 @@
+
+Objective value: 600
+cabal run heuristics -- solver -f 'examples/huge.dat' grasp  0,43s user 0,07s system 174% cpu 0,286 total
+
+Objective value: 692
+cabal run heuristics -- solver -f 'examples/huge.dat' grasp  0,41s user 0,09s system 168% cpu 0,297 total
+
+Objective value: 600
+cabal run heuristics -- solver -f 'examples/huge.dat' grasp --threshold 0.3  8,81s user 1,53s system 135% cpu 7,649 total

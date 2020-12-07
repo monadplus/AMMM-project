@@ -1,0 +1,18 @@
+
+Objective value: 978
+cabal run heuristics -- solver -f 'examples/huge.dat' greedy  0,09s user 0,02s system 107% cpu 0,106 total
+
+Objective value: 980
+cabal run heuristics -- solver -f 'examples/huge.dat' greedy  0,12s user 0,06s system 135% cpu 0,127 total
+
+Objective value: 813
+cabal run heuristics -- solver -f 'examples/huge.dat' greedy  0,11s user 0,06s system 138% cpu 0,127 total
+
+Objective value: 1124
+cabal run heuristics -- solver -f 'examples/huge.dat' greedy  0,14s user 0,05s system 127% cpu 0,148 total
+
+Objective value: 1100
+cabal run heuristics -- solver -f 'examples/huge.dat' greedy  0,10s user 0,03s system 100% cpu 0,128 total
+
+Objective value: 1086
+cabal run heuristics -- solver -f 'examples/huge.dat' greedy  0,09s user 0,03s system 97% cpu 0,126 total

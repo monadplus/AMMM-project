@@ -1,0 +1,16 @@
+============ heuristics/examples/sample_50.dat ================
+Objective value: 292
+cabal run heuristics -- solver -f 'examples/sample_50.dat' greedy  0,16s user 0,04s system 154% cpu 0,128 total
+
+Objective value: 346
+cabal run heuristics -- solver -f 'examples/sample_50.dat' greedy  0,16s user 0,05s system 149% cpu 0,137 total
+
+Objective value: 306
+cabal run heuristics -- solver -f 'examples/sample_50.dat' greedy  0,14s user 0,03s system 136% cpu 0,126 total
+
+Objective value: 308
+cabal run heuristics -- solver -f 'examples/sample_50.dat' greedy  0,14s user 0,05s system 139% cpu 0,136 total
+
+Objective value: 280
+cabal run heuristics -- solver -f 'examples/sample_50.dat' greedy  0,08s user 0,08s system 138% cpu 0,116 total
+============================================
