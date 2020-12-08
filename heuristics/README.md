@@ -83,6 +83,8 @@ $ cabal run heuristics -- generator -n 10000 -f 'example.dat'
 ./example_10000.dat
 ```
 
+There is the `generate_instances.sh` script that makes it easier to generate test samples.
+
 ## TODO
 
 - [ ] Performance can be improved A LOT.

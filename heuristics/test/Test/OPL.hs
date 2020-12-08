@@ -1,3 +1,12 @@
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Test.OPL
+-- Copyright   :  (C) 2020 Arnau Abella
+-- License     :  MIT (see the file LICENSE)
+-- Maintainer  :  Arnau Abella <arnauabella@gmail.com>
+-- Stability   :  experimental
+-- Portability :  non-portable
+----------------------------------------------------------------------------
 module Test.OPL where
 
 import qualified Data.ByteString.Lazy as L

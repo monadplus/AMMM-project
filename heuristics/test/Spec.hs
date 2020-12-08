@@ -1,3 +1,12 @@
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Main
+-- Copyright   :  (C) 2020 Arnau Abella
+-- License     :  MIT (see the file LICENSE)
+-- Maintainer  :  Arnau Abella <arnauabella@gmail.com>
+-- Stability   :  experimental
+-- Portability :  non-portable
+----------------------------------------------------------------------------
 module Main (main) where
 
 import System.IO

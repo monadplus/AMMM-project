@@ -4,11 +4,19 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
-
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Internal.OPL
+-- Copyright   :  (C) 2020 Arnau Abella
+-- License     :  MIT (see the file LICENSE)
+-- Maintainer  :  Arnau Abella <arnauabella@gmail.com>
+-- Stability   :  experimental
+-- Portability :  non-portable
+----------------------------------------------------------------------------
 module Internal.OPL where
-
-----------------------------------------------
 
 import Data.ByteString.Builder (Builder)
 import qualified Data.ByteString.Builder as B
@@ -18,8 +26,6 @@ import Data.Coerce
 import Internal.Types
 import Lens.Micro.Platform
 import Text.Printf
-
-----------------------------------------------
 
 class OPL a where
   toOPL :: a -> Builder
@@ -32,6 +38,9 @@ instance OPL Int where
 
 instance OPL Double where
   toOPL = B.doubleDec
+
+deriving via Double instance OPL Distance
+deriving via Int instance OPL Cost
 
 instance (OPL a) => OPL [a] where
   toOPL xs =
@@ -155,16 +164,16 @@ decodeUtf8OPL lbs = Problem {..}
     population :: [Population]
     population = getLineContent "p"
 
-    d_city :: [Double]
+    d_city :: [Distance]
     d_city = getLineContent "d_city"
 
     cap :: [Int]
     cap = getLineContent "cap"
 
-    cost :: [Int]
+    cost :: [Cost]
     cost = getLineContent "cost"
 
-    _dCenter :: Double
+    _dCenter :: Distance
     _dCenter = getLineContent "d_center"
 
     _cities :: [City]

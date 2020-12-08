@@ -8,10 +8,16 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
-
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Internal.Heuristics
+-- Copyright   :  (C) 2020 Arnau Abella
+-- License     :  MIT (see the file LICENSE)
+-- Maintainer  :  Arnau Abella <arnauabella@gmail.com>
+-- Stability   :  experimental
+-- Portability :  non-portable
+----------------------------------------------------------------------------
 module Internal.Heuristics where
-
-------------------------------------------------
 
 import Control.Exception
 import Control.Monad
@@ -33,7 +39,6 @@ import System.Random.MWC (GenIO)
 import qualified System.Random.MWC as R
 import Text.Printf
 
-------------------------------------------------
 
 -- | Information related to location
 data LocationInfo = LocationInfo
@@ -59,7 +64,7 @@ data UpdateCmd = UpdateCmd
 
 -- | Read-only configuration
 data Config = Config
-  { _cMinDistLoc :: MinDistLoc,
+  { _cMinDistLoc :: Distance,
     _cFacilityTypes :: [FacilityType],
     _cAlpha :: Alpha,
     _cGen :: GenIO
@@ -151,7 +156,7 @@ toSolution =
 --  * If the location doesn't has a logistic center or the current does not fullfil the constrants, then add/upgrade the one with the smallest cost that satisfies the distance and population constraint
 computeCost ::
   Tier ->
-  MinDistLoc ->
+  Distance ->
   PA ->
   City ->
   [FacilityType] ->
@@ -414,7 +419,7 @@ runAlgorithm' problem algorithm = do
     maxIterationsWithoutImprovement :: Int
     maxIterationsWithoutImprovement = 1000
 
-    minDistLoc :: MinDistLoc
+    minDistLoc :: Distance
     minDistLoc = problem ^. dCenter
 
     locations :: [Location]

@@ -5,10 +5,16 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
-
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Internal.Types
+-- Copyright   :  (C) 2020 Arnau Abella
+-- License     :  MIT (see the file LICENSE)
+-- Maintainer  :  Arnau Abella <arnauabella@gmail.com>
+-- Stability   :  experimental
+-- Portability :  non-portable
+----------------------------------------------------------------------------
 module Internal.Types where
-
------------------------------------------------------------------
 
 import Data.Coerce
 import Data.Generics.Product.Types
@@ -20,8 +26,6 @@ import Data.Word
 import GHC.Generics (Generic)
 import Lens.Micro.Platform
 
------------------------------------------------------------------
-
 data LocalSearchStrategy
   = -- | Stop as soon as you find an improvement
     FirstImprovement
@@ -29,11 +33,41 @@ data LocalSearchStrategy
     BestImprovement
   deriving stock (Show)
 
+data Tier = Primary | Secondary
+  deriving stock (Show, Eq, Ord, Generic)
+
 newtype Alpha = Alpha {_alpha :: Double}
   deriving newtype (Show, Read, Eq, Ord, Num, Fractional)
 
 newtype Seconds = Seconds {_seconds :: Word64}
   deriving newtype (Show, Read, Eq, Ord, Num)
+
+newtype Cost = Cost { _unsafeCost :: Int }
+  deriving newtype (Show, Eq, Ord, Enum, Num, Real, Integral)
+  deriving (Semigroup, Monoid) via (Sum Int)
+
+newtype Id = Id {_unsafeId :: Word64}
+  deriving newtype (Show, Eq, Ord, Num, Enum)
+
+newtype Occupancy = Occupancy { _unsafeOccupancy :: Double }
+  deriving newtype (Show, Eq, Ord, Enum, Num, Real, Fractional)
+  deriving (Semigroup, Monoid) via (Sum Double)
+
+newtype Population = Population {_population :: Int}
+  deriving stock (Generic)
+  deriving newtype (Show, Eq, Ord, Enum, Num, Real, Integral)
+  deriving (Semigroup, Monoid) via (Sum Int)
+
+newtype Distance = Distance {_distance :: Double}
+  deriving newtype (Show, Num, Eq, Ord, Fractional)
+  deriving (Semigroup, Monoid) via (Sum Double)
+
+-- | Discrete 'Location' in a discrete 'Grid'.
+data Location = Location
+  { _x :: {-# UNPACK #-} !Int,
+    _y :: {-# UNPACK #-} !Int
+  }
+  deriving stock (Show, Eq, Ord, Generic)
 
 -- | Metaheuristic algorithm
 data Algorithm
@@ -47,28 +81,6 @@ data Algorithm
       }
   deriving stock (Show)
 
--- | Cost of the facility
-type Cost = Int
-
--- | Facility occupancy
-type Occupancy = Double
-
--- | Minimum distance between facilities
-type MinDistLoc = Double
-
-newtype Id = Id {_unsafeId :: Word64}
-  deriving newtype (Show, Eq, Ord, Num, Enum)
-
-data Location = Location
-  { _x :: {-# UNPACK #-} !Int,
-    _y :: {-# UNPACK #-} !Int
-  }
-  deriving stock (Show, Eq, Ord, Generic)
-
-newtype Population = Population {_population :: Int}
-  deriving stock (Generic)
-  deriving newtype (Show, Eq, Ord, Enum, Num, Real, Integral)
-
 data City = City
   { _cId :: Id,
     _cLocation :: Location,
@@ -78,7 +90,7 @@ data City = City
 
 -- | Logistic Center Type
 data FacilityType = FacilityType
-  { _dCity :: Double,
+  { _dCity :: Distance,
     _cap :: Int,
     _cost :: Cost
   }
@@ -88,12 +100,9 @@ data Problem = Problem
   { _cities :: [City],
     _facilitiesLocation :: [Location],
     _facilityTypes :: [FacilityType],
-    _dCenter :: MinDistLoc
+    _dCenter :: Distance
   }
   deriving stock (Show, Eq)
-
-data Tier = Primary | Secondary
-  deriving stock (Show, Eq, Ord, Generic)
 
 data Facility = Facility
   { _fLocation :: Location,
@@ -118,10 +127,6 @@ data Grid = Grid
     _gridY :: Int
   }
 
-newtype Distance = Distance {_distance :: Double}
-  deriving newtype (Show, Num, Eq, Ord, Fractional)
-  deriving (Semigroup, Monoid) via (Sum Double)
-
 makeLenses ''Location
 makeLenses ''Population
 makeLenses ''City
@@ -135,6 +140,8 @@ makeLenses ''Distance
 makeLenses ''Algorithm -- Notice this generates Traversal' for lenses that do not appear in all cases.
 makeLenses ''Alpha
 makeLenses ''Seconds
+makeLenses ''Cost
+makeLenses ''Occupancy
 
 getOccupancy :: Tier -> City -> Occupancy
 getOccupancy Primary = fromIntegral . view cPopulation
@@ -150,12 +157,13 @@ diagonal (Grid x y) = sqrt ((pow2 x) + (pow2 y))
 
 -- | Rectangular 'Grid'
 --
--- Property: gridX*gridY / n = density
---           where n = "expected number of elements in the grid"
+-- prop> (gridX*gridY)/population = density
 rectGrid :: Double -> Int -> Grid
-rectGrid density n =
-  let x = floor . sqrt $ fromIntegral n / density
-   in Grid x x
+rectGrid density population
+  | density <= 0 && density > 1 = error "0 < density <= 1"
+  | otherwise =
+    let x = floor $ sqrt ((fromIntegral population) / density)
+     in Grid x x
 
 euclideanDistance :: Location -> Location -> Distance
 euclideanDistance l1 l2 = coerce $ sqrt (f x + f y)

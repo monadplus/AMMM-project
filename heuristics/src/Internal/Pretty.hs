@@ -1,8 +1,14 @@
 {-# LANGUAGE TypeApplications #-}
-
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Internal.Pretty
+-- Copyright   :  (C) 2020 Arnau Abella
+-- License     :  MIT (see the file LICENSE)
+-- Maintainer  :  Arnau Abella <arnauabella@gmail.com>
+-- Stability   :  experimental
+-- Portability :  non-portable
+----------------------------------------------------------------------------
 module Internal.Pretty where
-
--------------------------------------------
 
 import Control.Monad.IO.Class
 import Data.Coerce (coerce)
@@ -10,8 +16,6 @@ import qualified Data.Map.Strict as Map
 import Internal.Types
 import Lens.Micro.Platform
 import Text.Printf
-
--------------------------------------------
 
 printSolution :: (MonadIO m) => Solution -> m ()
 printSolution = liftIO . putStr . prettySolution
@@ -37,7 +41,7 @@ prettySolution solution =
 
     prettyFacility :: Facility -> String
     prettyFacility (Facility l t _) =
-      printf "%s with cost %d" (prettyLocation l) (t ^. cost)
+      printf "%s with cost %d" (prettyLocation l) (t ^. cost . unsafeCost)
 
     prettyLocation :: Location -> String
     prettyLocation (Location x y) = printf "(%d, %d)" x y
