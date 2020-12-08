@@ -1,0 +1,7 @@
+It didn't found a solution because of the time limit.
+It was preparing the problem for 15'...
+
+
+============ heuristics/instances/sample_300.dat ================
+No solution found
+============================================

@@ -1,0 +1,9 @@
+
+Objective value: 364
+cabal run heuristics -- solver grasp -f 'instances/sample_30.dat'  0,62s user 0,14s system 162% cpu 0,466 total
+
+Objective value: 364
+cabal run heuristics -- solver grasp -f 'instances/sample_30.dat'  0,70s user 0,11s system 161% cpu 0,507 total
+
+Objective value: 364
+cabal run heuristics -- solver grasp -f 'instances/sample_30.dat'  0,58s user 0,11s system 155% cpu 0,446 total

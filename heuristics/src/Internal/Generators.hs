@@ -55,8 +55,9 @@ sample n = runReaderT genProblem =<< R.createSystemRandom
 
     genLocation :: HasGenIO r m => Grid -> m Location
     genLocation grid = do
-      let getCoordinate gridLens =
-            liftIO . R.uniformRM (0, grid ^. gridLens . to (subtract 1)) =<< askGen
+      let biggerGrid = doubleGrid grid
+          getCoordinate gridLens =
+            liftIO . R.uniformRM (0, biggerGrid ^. gridLens . to (subtract 1)) =<< askGen
       Location <$> getCoordinate gridX <*> getCoordinate gridY
 
     genPopulation :: HasGenIO r m => m Population
@@ -81,8 +82,9 @@ sample n = runReaderT genProblem =<< R.createSystemRandom
 
     genDistCity :: HasGenIO r m => Grid -> m Distance
     genDistCity grid = do
+      let biggerGrid = doubleGrid . doubleGrid $ grid
       gen <- askGen
-      let radius = (diagonal grid) / 2.0
+      let radius = (diagonal biggerGrid) / 2.0
           mu = radius / 2.0
           sigma = mu / 3.0
       distance <- liftIO $ R.normal mu sigma gen

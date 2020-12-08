@@ -3,14 +3,14 @@ main {
   var out = new IloOplOutputFile("output.txt");
 
   var files = new Array();
-  // files[0] = "heuristics/examples/sample_100.dat";
-  files[0] = "input/hugeE.dat";
+  //files[0] = "input/sample_50.dat";
+  files[0] = "heuristics/instances/sample_250.dat";
 
   var src = new IloOplModelSource("project.mod");
   var def = new IloOplModelDefinition(src);
   var cplex = new IloCplex();
 
-  cplex.tilim=240; // time limit in seconds
+  cplex.tilim=900; // time limit in seconds
   cplex.epgap=0.01; // Branch and bound acceptance.
 
   var start = new Date();

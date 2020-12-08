@@ -1,0 +1,7 @@
+
+
+Objective value: 1828
+cabal run heuristics -- solver grasp -t 0.3 -l 240 -f   19,62s user 4,03s system 192% cpu 12,267 total
+
+Objective value: 1800
+cabal run heuristics -- solver grasp -t 0.3 -l 240 -f   20,54s user 4,29s system 195% cpu 12,670 total

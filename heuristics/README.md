@@ -8,9 +8,9 @@ The project includes:
 ## Structure
 
 - `app` contains the sources of the executable.
-- `src` contains the sources of the library that the exectuable depends on.
+- `src` contains the sources of the library that the executable depends on.
 - `test` contains the sources of the library's test.
-- `examples` contains some instances to run.
+- `instances` contains some instances to test the solver.
 
 ## Installation
 
@@ -62,16 +62,16 @@ From this point, you should be able to run the different algorithms. See example
 
 ```sh
 # Greedy (the most basic one)
-cabal run heuristics -- solver greedy -f 'examples/sample_500.dat'
+cabal run heuristics -- solver greedy -f 'instances/sample_10.dat'
 
 # Greedy with local search first improvement
-cabal run heuristics -- solver greedy --localSearch -f 'examples/sample_500.dat'
+cabal run heuristics -- solver greedy --localSearch -f 'instances/sample_10.dat'
 
 # Greedy with local search best improvement
-cabal run heuristics -- solver greedy --localSearch -b -f 'examples/sample_500.dat'
+cabal run heuristics -- solver greedy --localSearch -b -f 'instances/sample_10.dat'
 
 # GRASP with time limit and alpha threshold.
-cabal run heuristics -- solver grasp --limit 300 --threshold 0.5 -f 'examples/sample_500.dat'
+cabal run heuristics -- solver grasp --limit 300 --threshold 0.5 -f 'instances/sample_10.dat'
 ```
 
 ### Instance Generator

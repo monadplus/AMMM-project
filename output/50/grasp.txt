@@ -1,14 +1,9 @@
-============ heuristics/examples/sample_50.dat ================
 
-Objective value: 252
-cabal run heuristics -- solver -f 'examples/sample_50.dat' grasp  0,37s user 0,11s system 172% cpu 0,275 total
+Objective value: 1192
+cabal run heuristics -- solver grasp -f 'instances/sample_50.dat'  2,02s user 0,37s system 164% cpu 1,457 total
 
-Objective value: 259
-cabal run heuristics -- solver -f 'examples/sample_50.dat' grasp  0,23s user 0,06s system 143% cpu 0,208 total
+Objective value: 1238
+cabal run heuristics -- solver grasp -f 'instances/sample_50.dat'  1,35s user 0,40s system 171% cpu 1,017 total
 
-Objective value: 259
-cabal run heuristics -- solver -f 'examples/sample_50.dat' grasp  0,29s user 0,05s system 145% cpu 0,237 total
-
-Objective value: 245
-cabal run heuristics -- solver -f 'examples/sample_50.dat' grasp  0,40s user 0,11s system 167% cpu 0,304 total
-============================================
+Objective value: 1238
+cabal run heuristics -- solver grasp -f 'instances/sample_50.dat'  1,22s user 0,20s system 152% cpu 0,926 total

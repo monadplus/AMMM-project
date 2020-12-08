@@ -165,6 +165,9 @@ rectGrid density population
     let x = floor $ sqrt ((fromIntegral population) / density)
      in Grid x x
 
+doubleGrid :: Grid -> Grid
+doubleGrid = (gridX %~ (* 2)) . (gridY %~ (* 2))
+
 euclideanDistance :: Location -> Location -> Distance
 euclideanDistance l1 l2 = coerce $ sqrt (f x + f y)
   where

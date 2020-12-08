@@ -1,3 +1,12 @@
-============ heuristics/examples/sample_100.dat ================
 
-============================================
+Objective value: 2244
+cabal run heuristics -- solver greedy --localSearch -f   0,22s user 0,05s system 184% cpu 0,148 total
+
+Objective value: 2154
+cabal run heuristics -- solver greedy --localSearch -f   0,11s user 0,06s system 132% cpu 0,127 total
+
+Objective value: 2164
+cabal run heuristics -- solver greedy --localSearch -f   0,21s user 0,05s system 178% cpu 0,147 total
+
+Objective value: 2233
+cabal run heuristics -- solver greedy --localSearch -f   0,24s user 0,05s system 195% cpu 0,147 total

@@ -1,0 +1,6 @@
+TIME LIMIT 4' reached!!
+
+============ heuristics/instances/sample_200.dat ================
+Objective value 2476
+Execution time: 241484.208984375ms
+============================================

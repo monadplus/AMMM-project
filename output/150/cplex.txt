@@ -1,0 +1,5 @@
+No solution after 15'
+
+============ heuristics/instances/sample_150.dat ================
+No solution found
+============================================

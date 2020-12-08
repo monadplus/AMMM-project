@@ -1,0 +1,9 @@
+
+Objective value: 560
+cabal run heuristics -- solver greedy -f 'instances/sample_20.dat'  0,11s user 0,03s system 131% cpu 0,108 total
+
+Objective value: 501
+cabal run heuristics -- solver greedy -f 'instances/sample_20.dat'  0,14s user 0,02s system 145% cpu 0,106 total
+
+Objective value: 500
+cabal run heuristics -- solver greedy -f 'instances/sample_20.dat'  0,09s user 0,02s system 100% cpu 0,116 total

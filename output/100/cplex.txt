@@ -1,3 +1,4 @@
-============ heuristics/examples/sample_100.dat ================
-
+============ heuristics/instances/sample_100.dat ================
+Objective value 1333
+Execution time: 138664.7890625ms
 ============================================

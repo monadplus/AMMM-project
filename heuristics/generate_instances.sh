@@ -1,5 +1,13 @@
 #!/bin/bash
 
-for ((size = 10 ; size <= 100 ; size+=10)); do
-    eval $"cabal run heuristics -- generator -n $size -f 'examples/example.dat'"
+OUTPUT_DIR='instances'
+FILENAME='sample.dat'
+CMD='cabal run heuristics -- generator'
+
+STEP=50
+MIN_SIZE=150
+MAX_SIZE=250
+
+for ((size = $MIN_SIZE ; size <= $MAX_SIZE ; size+=STEP)); do
+    eval $"$CMD -n $size -f '$OUTPUT_DIR/$FILENAME'"
 done

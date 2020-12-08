@@ -1,0 +1,4 @@
+Stopped after 6'
+
+============ heuristics/instances/sample_250.dat ================
+Objective value 2800
