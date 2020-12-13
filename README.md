@@ -2,7 +2,9 @@
 
 The statement of the problem can be found [here](./statement.pdf).
 
-The mathematical model can be found [here](model-draft.pdf).
+The mathematical model can be found [here](report.pdf).
+
+The slides of the presentation can be found [here](slides.pdf).
 
 ## Integer Linear Programming
 
