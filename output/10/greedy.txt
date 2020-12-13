@@ -1,0 +1,12 @@
+
+"Infeasible"
+cabal run heuristics -- solver greedy -f 'instances/sample_10.dat'  0,08s user 0,03s system 92% cpu 0,116 total
+
+Objective value: 210
+cabal run heuristics -- solver greedy -f 'instances/sample_10.dat'  0,09s user 0,04s system 95% cpu 0,127 total
+
+Objective value: 173
+cabal run heuristics -- solver greedy -f 'instances/sample_10.dat'  0,11s user 0,03s system 118% cpu 0,117 total
+
+Objective value: 210
+cabal run heuristics -- solver greedy -f 'instances/sample_10.dat'  0,06s user 0,04s system 110% cpu 0,095 total
